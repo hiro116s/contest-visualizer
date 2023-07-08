@@ -1,15 +1,19 @@
+import { apply as apply1 } from "./visualizer.js";
+
+let playInterval;
+let isPlaying = false;
+
 function updateResult() {
   const seed = document.getElementById('seed').value;
   const input = document.getElementById('input').value;
   const output = document.getElementById('output').value;
+  const turn = document.getElementById('turn').value;
 
-  apply(seed, input, output);
+  apply(seed, input, output, turn);
 }
 
-function apply(seed, input, output) {
-  // ここに実際のvisualizerの実装を書いてください。
-  const result = document.getElementById('result');
-  result.innerHTML = `Seed: ${seed}<br>Input: ${input}<br>Output: ${output}`;
+function apply(seed, input, output, turn) {
+  apply1(seed, input, output, turn);
 }
 
 async function fetchAndSetContent(url, elementId) {
@@ -47,6 +51,44 @@ function checkSeedParameter() {
   }
 }
 
+// Add the following function
+function splitOutputs(text) {
+  return text.trim().split("\n\n");
+}
+
+// Modify the play function as follows
+async function play() {
+  const seed = document.getElementById("seed").value;
+  const input = document.getElementById("input").value;
+  const output = splitOutputs(document.getElementById("output").value);
+  const maxTurn = output.length;
+  const timeInput = document.getElementById("time");
+
+  let currentTurn = 1;
+
+  for (let i = 0; i < maxTurn * timeInput.value; i++) {
+    setTimeout(() => {
+      if (currentTurn >= maxTurn) {
+        currentTurn = 0;
+      }
+
+      apply(seed, input, output[currentTurn]);
+      document.getElementById("turn").value = currentTurn + 1;
+
+      currentTurn++;
+    }, (i + 1) * 100);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById("playButton").addEventListener("click", play);
+  document.getElementById("turn").addEventListener("change", () => {
+    const turn = document.getElementById("turn").value;
+    apply(null, null, null, turn);
+  });
   checkSeedParameter();
+
+  // ボタンにイベントリスナーを追加
+  const updateButton = document.querySelector('button#updateButton');
+  updateButton.addEventListener('click', updateResult);
 });

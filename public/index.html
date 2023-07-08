@@ -24,7 +24,12 @@
     <label for="time">Time:</label>
     <input type="range" id="time" min="0" max="100" step="1">
   </div>
-  <button onclick="updateResult()">結果を反映</button>
+  <div>
+    <label for="turn">Turn:</label>
+    <input type="number" id="turn" min="1" value="1">
+  </div>
+  <button id="playButton">Play</button>
+  <button id="updateButton">Update</button>
   <div id="result"></div>
   <script src="/bundle.js"></script>
 </body>
