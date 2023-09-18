@@ -32,8 +32,8 @@ async function loadSeedData(seed) {
     return;
   }
   document.getElementById('seed').value = seed;
-  await fetchAndSetContent(`input_${seed}.txt`, 'input');
-  await fetchAndSetContent(`output_${seed}.txt`, 'output');
+  await fetchAndSetContent(`/static/input_${seed}.txt`, 'input');
+  await fetchAndSetContent(`/static/output_${seed}.txt`, 'output');
   apply(seed, document.getElementById('input').value, document.getElementById('output').value);
 }
 
