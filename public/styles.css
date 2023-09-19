@@ -2,12 +2,18 @@ body {
   margin: 0;
   padding: 20px;
   font-family: Arial, sans-serif;
+  font-size: 20px;
   box-sizing: border-box;
 }
 
-input[type="number"], textarea {
+input[type="number"],
+textarea {
   width: 100%;
   box-sizing: border-box;
+}
+
+input[type="checkbox"] {
+  transform: scale(2);
 }
 
 textarea {
@@ -20,6 +26,13 @@ div {
 }
 
 label {
-  display: block;
   margin-bottom: 5px;
+}
+
+#result {
+  display: flex;
+}
+
+#option {
+  margin: 0 0 0 20px;
 }

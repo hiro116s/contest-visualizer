@@ -1,3 +1,7 @@
+const N = 50;
+const vx = [0, 1, 0, -1];
+const vy = [1, 0, -1, 0];
+
 function lerpColor(color1, color2, t) {
   return [
     color1[0] + (color2[0] - color1[0]) * t,
@@ -6,72 +10,169 @@ function lerpColor(color1, color2, t) {
   ];
 }
 
-function drawRectanglesAndCircles(ctx, rectangles, circles, areas) {
-  for (let i = 0; i < rectangles.length; i++) {
-    const rect = rectangles[i];
-    const area = areas[i];
-    const circleRadius = circles[i][2];
-    const vi = 1 - (1 - Math.min(area, circleRadius) / Math.max(area, circleRadius));
+function draw(inMap, outMap) {
+  const canvas = document.getElementById("visualizer-main");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const red = [255, 100, 0];
-    const blue = [30, 0, 200];
-    const fillColor = lerpColor(blue, red, vi);
+  const shouldDrop = document.querySelector("#dropToggle input").checked;
 
-    ctx.beginPath();
-    ctx.rect(rect[0] / 10, rect[1] / 10, (rect[2] - rect[0]) / 10, (rect[3] - rect[1]) / 10);
-    ctx.fillStyle = `rgb(${fillColor[0]}, ${fillColor[1]}, ${fillColor[2]})`;
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.stroke();
+  const oxMap = shouldDrop ? getMapAfterDrop(inMap, outMap) : inMap;
+  const maxConnectedComponents = getMaxConnectedComponents(oxMap);
+  const size = 20;
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (oxMap[y][x] == 'o' || oxMap[y][x] == 'x') {
+        ctx.beginPath();
+        ctx.rect(x * size, y * size, size, size);
+        ctx.fillStyle = "black";
+        ctx.stroke();
+        if (maxConnectedComponents.map[y][x]) {
+          ctx.beginPath();
+          ctx.rect(x * size, y * size, size, size);
+          ctx.fillStyle = "yellow";
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc((x + 0.5) * size, (y + 0.5) * size, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = oxMap[y][x] == 'o' ? "red" : "blue";
+        ctx.fill();
+      } else if (outMap[y][x] == '-') {
+        ctx.beginPath();
+        ctx.rect(x * size, y * size, size, size / 2);
+        ctx.fillStyle = "silver";
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function getMaxConnectedComponents(map) {
+  const visited = new Array(N);
+  for (let y = 0; y < N; y++) {
+    visited[y] = new Array(N).fill(false);
   }
 
-  for (const circle of circles) {
-    ctx.beginPath();
-    ctx.arc(circle[0] / 10, circle[1] / 10, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = "red";
-    ctx.fill();
+  let oMax = { v: 0, x: 0, y: 0 };
+  let xMax = { v: 0, x: 0, y: 0 };
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (!visited[y][x]) {
+        if (map[y][x] == 'o') {
+          const cnt = dfs(map, visited, x, y, 'o');
+          if (cnt > oMax.v) {
+            oMax = { v: cnt, x: x, y: y };
+          }
+        } else if (map[y][x] == 'x') {
+          const cnt = dfs(map, visited, x, y, 'x');
+          if (cnt > oMax.v) {
+            xMax = { v: cnt, x: x, y: y };
+          }
+        }
+      }
+    }
   }
+  for (let y = 0; y < N; y++) {
+    visited[y] = new Array(N).fill(false);
+  }
+  dfs(map, visited, oMax.x, oMax.y, 'o');
+  dfs(map, visited, xMax.x, xMax.y, 'x');
+  return { map: visited, cnt: oMax.v + xMax.v };
+}
+
+function dfs(map, visited, x, y, c) {
+  if (x < 0 || x >= N || y < 0 || y >= N) {
+    return 0;
+  }
+  if (visited[y][x]) {
+    return 0;
+  }
+  if (map[y][x] != c) {
+    return 0;
+  }
+  visited[y][x] = true;
+  let cnt = 1;
+  for (let i = 0; i < 4; i++) {
+    cnt += dfs(map, visited, x + vx[i], y + vy[i], c);
+  }
+  return cnt;
+}
+
+function getMapAfterDrop(inMap, outMap) {
+  const oxMap = new Array(N);
+  for (let y = 0; y < N; y++) {
+    oxMap[y] = new Array(N).fill('.');
+  }
+  for (let x = 0; x < N; x++) {
+    let oy = N - 1;
+    let iy = N - 1;
+    while (iy >= 0 && oy >= 0) {
+      if (inMap[iy][x] == 'o' || inMap[iy][x] == 'x') {
+        oxMap[oy][x] = inMap[iy][x];
+        oy--;
+      }
+      if (outMap[iy][x] == '-') {
+        oy = iy - 1;
+      }
+      iy--;
+    }
+  }
+  return oxMap;
 }
 
 function parseInput(input) {
-  const inputLines = input.trim().split("\n");
-  const n = parseInt(inputLines.shift(), 10);
-
-  const circles = inputLines.map((line) => {
-    const [x, y, r] = line.split(" ").map(Number);
-    return [x, y, r];
-  });
-
-  return { n, circles };
+  return input.trim().split("\n");
 }
 
 function parseOutput(output) {
-  const outputLines = output.trim().split("\n");
-
-  const rectangles = outputLines.map((line) => {
-    const [a, b, c, d] = line.split(" ").map(Number);
-    return [a, b, c, d];
-  });
-
-  return rectangles;
+  return output.trim().split("\n");
 }
 
 export function apply(seed, input, output) {
-  const { n, circles } = parseInput(input);
-  const rectangles = parseOutput(output);
+  const inMap = parseInput(input);
+  const outMap = parseOutput(output);
 
-  const areas = rectangles.map(([a, b, c, d]) => {
-    return Math.abs((c - a) * (d - b));
-  });
+  const optionDiv = document.createElement("div");
+  optionDiv.id = "option";
+  optionDiv.appendChild(createScore(inMap, outMap));
+  optionDiv.appendChild(createDropToggle(inMap, outMap));
 
   const canvas = document.createElement("canvas");
+  canvas.id = "visualizer-main";
   canvas.width = 1000;
   canvas.height = 1000;
-  const ctx = canvas.getContext("2d");
-
-  drawRectanglesAndCircles(ctx, rectangles, circles, areas);
 
   const resultDiv = document.getElementById("result");
   resultDiv.innerHTML = "";
   resultDiv.appendChild(canvas);
+  resultDiv.appendChild(optionDiv);
+
+  draw(inMap, outMap);
+}
+
+function createScore(inMap, outMap) {
+  const scoreDiv = document.createElement("div");
+  scoreDiv.id = "score";
+  const scoreLabel = document.createElement("label");
+  scoreLabel.innerHTML = "Score: ";
+  const scoreSpan = document.createElement("span");
+  scoreSpan.innerHTML = getMaxConnectedComponents(getMapAfterDrop(inMap, outMap)).cnt;
+  scoreDiv.appendChild(scoreLabel);
+  scoreDiv.appendChild(scoreSpan);
+  return scoreDiv;
+}
+
+function createDropToggle(inMap, outMap) {
+  const dropToggleDiv = document.createElement("div");
+  dropToggleDiv.id = "dropToggle";
+  const dropToggleLabel = document.createElement("label");
+  dropToggleLabel.innerHTML = "Drop: ";
+  const dropToggleCheckbox = document.createElement("input");
+  dropToggleCheckbox.type = "checkbox";
+  dropToggleCheckbox.checked = true;
+  dropToggleCheckbox.addEventListener("change", () => draw(inMap, outMap));
+  dropToggleDiv.appendChild(dropToggleLabel);
+  dropToggleDiv.appendChild(dropToggleCheckbox);
+  return dropToggleDiv;
 }
