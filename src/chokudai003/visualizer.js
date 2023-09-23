@@ -15,9 +15,9 @@ function draw(inMap, outMap) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const shouldDrop = document.querySelector("#dropToggle input").checked;
+  const isDropMode = document.querySelector("#dropToggle input").checked;
 
-  const oxMap = shouldDrop ? getMapAfterDrop(inMap, outMap) : inMap;
+  const oxMap = isDropMode ? getMapAfterDrop(inMap, outMap) : inMap;
   const maxConnectedComponents = getMaxConnectedComponents(oxMap);
   const size = 20;
   for (let y = 0; y < N; y++) {
@@ -27,7 +27,7 @@ function draw(inMap, outMap) {
         ctx.rect(x * size, y * size, size, size);
         ctx.fillStyle = "black";
         ctx.stroke();
-        if (maxConnectedComponents.map[y][x]) {
+        if (isDropMode && maxConnectedComponents.map[y][x]) {
           ctx.beginPath();
           ctx.rect(x * size, y * size, size, size);
           ctx.fillStyle = "yellow";
@@ -42,6 +42,11 @@ function draw(inMap, outMap) {
         ctx.beginPath();
         ctx.rect(x * size, y * size, size, size / 2);
         ctx.fillStyle = "silver";
+        ctx.fill();
+      } else if ((isDropMode && oxMap[y][x] == '+') || (!isDropMode && outMap[y][x] == '+')) {
+        ctx.beginPath();
+        ctx.rect(x * size, y * size, size, size);
+        ctx.fillStyle = "green";
         ctx.fill();
       }
     }
@@ -110,6 +115,9 @@ function getMapAfterDrop(inMap, outMap) {
     while (iy >= 0 && oy >= 0) {
       if (inMap[iy][x] == 'o' || inMap[iy][x] == 'x') {
         oxMap[oy][x] = inMap[iy][x];
+        oy--;
+      } else if (outMap[iy][x] == '+') {
+        oxMap[oy][x] = '+';
         oy--;
       }
       if (outMap[iy][x] == '-') {
