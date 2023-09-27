@@ -1,8 +1,11 @@
 import { apply as applyAhc001 } from "./ahc001/visualizer.js";
 import { apply as applyChokudai003 } from "./chokudai003/visualizer.js";
+import { default as visualizerChokudai005 } from "./chokudai005/visualizer.js";
 
 let playInterval;
 let isPlaying = false;
+
+let visualizer = null;
 
 function updateResult() {
   const seed = document.getElementById('seed').value;
@@ -27,9 +30,12 @@ function apply(seed, input, output, turn) {
     applyAhc001(seed, input, output, turn);
   } else if (contestName === "chokudai003") {
     applyChokudai003(seed, input, output, turn);
+  } else if (contestName === "chokudai005") {
+    visualizer = visualizerChokudai005;
   } else {
     console.error(`Unknown contest name: ${contestName}`);
   }
+  visualizer.initialize(seed, input, output);
 }
 
 async function fetchAndSetContent(url, elementId) {
@@ -76,25 +82,26 @@ function splitOutputs(text) {
 
 // Modify the play function as follows
 async function play() {
-  const seed = document.getElementById("seed").value;
-  const input = document.getElementById("input").value;
-  const output = splitOutputs(document.getElementById("output").value);
-  const maxTurn = output.length;
+  if (visualizer === null) {
+    return;
+  }
+  const maxTurn = visualizer.getMaxTurn();
   const timeInput = document.getElementById("time");
+  console.log(timeInput.value);
 
-  let currentTurn = 1;
+  let currentTurn = 0;
 
-  for (let i = 0; i < maxTurn * timeInput.value; i++) {
+  for (let i = 0; i <= maxTurn; i++) {
     setTimeout(() => {
-      if (currentTurn >= maxTurn) {
+      if (currentTurn > maxTurn) {
         currentTurn = 0;
       }
 
-      apply(seed, input, output[currentTurn]);
-      document.getElementById("turn").value = currentTurn + 1;
+      visualizer.apply(currentTurn);
+      document.getElementById("turn").value = currentTurn;
 
       currentTurn++;
-    }, (i + 1) * 100);
+    }, (i + 1) * (timeInput.max - timeInput.value));
   }
 }
 
@@ -102,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById("playButton").addEventListener("click", play);
   document.getElementById("turn").addEventListener("change", () => {
     const turn = document.getElementById("turn").value;
-    apply(null, null, null, turn);
+    visualizer.apply(turn);
   });
   checkSeedParameter();
 
