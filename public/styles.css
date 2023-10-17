@@ -6,8 +6,7 @@ body {
   box-sizing: border-box;
 }
 
-input[type="number"],
-textarea {
+textarea.data {
   width: 100%;
   box-sizing: border-box;
 }
@@ -35,4 +34,27 @@ label {
 
 #option {
   margin: 0 0 0 20px;
+}
+
+#toggleButton {
+  width: 50px;
+  height: 70px;
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+#toggleDiv {
+  width: 200px;
+  height: 70px;
+  margin-bottom: 30px;
+}
+
+#turn {
+  width: 100px;
+  height: 70px;
+  font-size: 20px;
+}
+
+#rangeDiv input {
+  width: 1000px;
 }

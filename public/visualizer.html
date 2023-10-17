@@ -14,22 +14,23 @@
   </div>
   <div>
     <label for="input">Input:</label>
-    <textarea id="input" rows="5"></textarea>
+    <textarea id="input" class="data" rows="5"></textarea>
   </div>
   <div>
     <label for="output">Output:</label>
-    <textarea id="output" rows="5"></textarea>
+    <textarea id="output" class="data" rows="5"></textarea>
   </div>
   <div>
-    <label for="time">Time:</label>
-    <input type="range" id="time" min="0" max="100" step="1">
+    <label for="speed">Time:</label>
+    <input type="range" id="speed" min="1" max="60" value="30" step="1">
   </div>
-  <div>
-    <label for="turn">Turn:</label>
+  <div id="toggleDiv">
+    <button id="toggleButton">&#9658</button>
     <input type="number" id="turn" min="1" value="1">
   </div>
-  <button id="playButton">Play</button>
-  <button id="updateButton">Update</button>
+  <div id="rangeDiv">
+    <input type="range" id="range" min="1" value="1">
+  </div>
   <div id="result"></div>
   <script src="/static/bundle.js"></script>
 </body>
