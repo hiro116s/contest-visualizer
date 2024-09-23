@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visualizer</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
+
 <body>
   <h1>Visualizer</h1>
   <div>
     <label for="seed">Seed:</label>
-    <input type="number" id="seed">
+    <input type="number" id="seed" min="0" value="0">
   </div>
   <div>
     <label for="input">Input:</label>
@@ -34,4 +36,5 @@
   <div id="result"></div>
   <script src="/static/bundle.js"></script>
 </body>
+
 </html>

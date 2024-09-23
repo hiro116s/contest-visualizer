@@ -29,38 +29,7 @@ function extractContestName(pathName: string): string {
   return ws[2];
 }
 
-function apply(seed: number, input: string, output: string) {
-  const contestName = extractContestName(window.location.pathname);
-  if (contestName === "ahc001") {
-    applyAhc001(seed, input, output);
-  } else if (contestName === "chokudai003") {
-    applyChokudai003(seed, input, output);
-  } else if (contestName === "chokudai005") {
-    visualizer = visualizerChokudai005;
-  } else if (contestName == 'ahc036') {
-    visualizer = visualizerAhc036;
-  } else if (contestName == 'ahc036_2') {
-    visualizer = visualizerAhc036_2;
-  } else {
-    console.error(`Unknown contest name: ${contestName}`);
-  }
-  visualizer.initialize(seed, input, output);
-  document.querySelector<HTMLInputElement>("#rangeDiv input")?.setAttribute('max', visualizer.getMaxTurn().toString());
-}
-
-async function loadSeedData(): Promise<void> {
-  const urlParams = new URLSearchParams(window.location.search);
-  const seedParam = urlParams.get('seed');
-
-  if (seedParam === null) {
-    return;
-  }
-  const seed = parseInt(seedParam, 10);
-  if (isNaN(seed)) {
-    alert('Error: Seed must be a number');
-    return;
-  }
-  setValueToElement('#seed', seed);
+async function loadSeedData(seed: number): Promise<void> {
   const contestName = extractContestName(window.location.pathname);
   const dirName = contestName;
   const [input, output] = await Promise.all([
@@ -69,7 +38,30 @@ async function loadSeedData(): Promise<void> {
   );
   setValueToElement('#input', input);
   setValueToElement('#output', output);
-  apply(seed, input, output);
+
+  visualizer = findVisualizer(contestName);
+  visualizer.initialize(seed, input, output);
+  document.querySelector<HTMLInputElement>("#rangeDiv input")?.setAttribute('max', visualizer.getMaxTurn().toString());
+  stop();
+  updateTurn(0);
+}
+
+function findVisualizer(contestName: string): Visualizer {
+  switch (contestName) {
+    case "ahc001":
+      return { initialize: applyAhc001, apply: applyAhc001, getMaxTurn: () => 0 };
+    case "chokudai003":
+      return { initialize: applyChokudai003, apply: applyChokudai003, getMaxTurn: () => 0 };
+    case "chokudai005":
+      return visualizerChokudai005;
+    case "ahc036":
+      return visualizerAhc036;
+    case "ahc036_2":
+      return visualizerAhc036_2;
+    default:
+      console.error("Error: Unknown contest name", contestName);
+      return NO_OP_VISUALIZER;
+  }
 }
 
 // Modify the play function as follows
@@ -77,18 +69,28 @@ function toggle(): void {
   if (visualizer === NO_OP_VISUALIZER) {
     return;
   }
-  const toggleButton = document.getElementById("toggleButton")!;
   if (!isPlaying) {
-    if (getNumberFromElement("#turn") >= visualizer.getMaxTurn()) {
-      setValueToElement("#turn", 0);
-    }
-    toggleButton.innerHTML = "■";
-    prev = Date.now();
+    start();
   } else {
-    toggleButton.innerHTML = "▶";
+    stop();
   }
-  isPlaying = !isPlaying;
   autoPlay();
+}
+
+function start(): void {
+  const toggleButton = document.getElementById("toggleButton")!;
+  if (getNumberFromElement("#turn") >= visualizer.getMaxTurn()) {
+    setValueToElement("#turn", 0);
+  }
+  toggleButton.innerHTML = "■";
+  prev = Date.now();
+  isPlaying = true;
+}
+
+function stop(): void {
+  const toggleButton = document.getElementById("toggleButton")!;
+  toggleButton.innerHTML = "▶";
+  isPlaying = false;
 }
 
 function autoPlay(): void {
@@ -115,6 +117,7 @@ function autoPlay(): void {
 function updateTurn(turn: number): void {
   const newTurn = Math.min(turn, visualizer.getMaxTurn());
   setValueToElement("#turn", newTurn);
+  setValueToElement("#rangeDiv input", newTurn);
   visualizer.apply(newTurn);
 }
 
@@ -123,6 +126,10 @@ autoPlay();
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggleButton")?.addEventListener("click", toggle);
   document.getElementById("turn")?.addEventListener("change", () => updateTurn(getNumberFromElement("#turn")));
+  document.getElementById("seed")?.addEventListener("change", () => {
+    const seed = getNumberFromElement("#seed");
+    loadSeedData(seed);
+  });
   document.querySelector<HTMLInputElement>("#rangeDiv input")?.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement | null;
     if (target) {
@@ -131,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateTurn(Number(turn));
     }
   });
-  loadSeedData();
+  loadSeedData(0);
 });
 
 function getNumberFromElement(id: string, defaultValue: number = 0): number {
