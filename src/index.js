@@ -1,6 +1,8 @@
 import { apply as applyAhc001 } from "./ahc001/visualizer.js";
 import { apply as applyChokudai003 } from "./chokudai003/visualizer.js";
 import { default as visualizerChokudai005 } from "./chokudai005/visualizer.js";
+import { default as visualizerAhc036 } from "./ahc036/visualizer.js";
+import { default as visualizerAhc036_2 } from "./ahc036_2/visualizer.js";
 
 let prev = Date.now();
 let isPlaying = false;
@@ -31,6 +33,10 @@ function apply(seed, input, output, turn) {
     applyChokudai003(seed, input, output, turn);
   } else if (contestName === "chokudai005") {
     visualizer = visualizerChokudai005;
+  } else if (contestName == 'ahc036') {
+    visualizer = visualizerAhc036;
+  } else if (contestName == 'ahc036_2') {
+    visualizer = visualizerAhc036_2;
   } else {
     console.error(`Unknown contest name: ${contestName}`);
   }
@@ -56,8 +62,9 @@ async function loadSeedData(seed) {
   }
   document.getElementById('seed').value = seed;
   const contestName = extractContestName(window.location.pathname);
-  await fetchAndSetContent(`/static/${contestName}/input_${seed}.txt`, 'input');
-  await fetchAndSetContent(`/static/${contestName}/output_${seed}.txt`, 'output');
+  const dirName = contestName;
+  await fetchAndSetContent(`/static/${dirName}/input_${seed}.txt`, 'input');
+  await fetchAndSetContent(`/static/${dirName}/output_${seed}.txt`, 'output');
   apply(seed, document.getElementById('input').value, document.getElementById('output').value);
 }
 
@@ -119,9 +126,10 @@ function autoPlay() {
 }
 
 function updateTurn(turn) {
-  const newTurn = Math.min(turn, visualizer.getMaxTurn());
+  const turnInt = parseInt(turn);
+  const newTurn = Math.min(turnInt, visualizer.getMaxTurn());
   document.getElementById("turn").value = newTurn;
-  visualizer.apply(turn);
+  visualizer.apply(turnInt);
 }
 
 autoPlay();
