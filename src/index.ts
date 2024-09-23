@@ -6,17 +6,30 @@ import { default as visualizerAhc036_2 } from "./ahc036_2/visualizer.js";
 
 let prev = Date.now();
 let isPlaying = false;
-let visualizer: any = null;
+
+const NO_OP_VISUALIZER = {
+  initialize: () => { },
+  apply: () => { },
+  getMaxTurn: () => 0,
+};
+
+let visualizer: Visualizer = NO_OP_VISUALIZER;
+
+interface Visualizer {
+  initialize(seed: number, input: string, output: string): void;
+  apply(turn: number): void;
+  getMaxTurn(): number;
+}
 
 function extractContestName(pathName: string): string {
-  const ws = window.location.pathname.split("/");
+  const ws = pathName.split("/");
   if (ws.length !== 3) {
-    console.error("Error: Unexpected pathname", window.location.pathname);
+    console.error("Error: Unexpected pathname", pathName);
   }
   return ws[2];
 }
 
-function apply(seed: string, input: string, output: string) {
+function apply(seed: number, input: string, output: string) {
   const contestName = extractContestName(window.location.pathname);
   if (contestName === "ahc001") {
     applyAhc001(seed, input, output);
@@ -32,56 +45,42 @@ function apply(seed: string, input: string, output: string) {
     console.error(`Unknown contest name: ${contestName}`);
   }
   visualizer.initialize(seed, input, output);
-  document.querySelector<HTMLInputElement>("#rangeDiv input")?.setAttribute('max', visualizer.getMaxTurn());
+  document.querySelector<HTMLInputElement>("#rangeDiv input")?.setAttribute('max', visualizer.getMaxTurn().toString());
 }
 
-async function fetchAndSetContent(url: string, elementId: string): Promise<void> {
-  try {
-    console.log(`Fetching content from ${url}`);
-    const response = await fetch(url);
-    const content = await response.text();
-    const element = document.querySelector<HTMLInputElement>(elementId);
-    if (element) {
-      element.value = content;
-    }
-  } catch (error) {
-    console.error(`Error fetching content from ${url}:`, error);
-  }
-}
-
-async function loadSeedData(seed: number): Promise<void> {
-  document.getElementById('seed')?.setAttribute('value', seed.toString());
-  const contestName = extractContestName(window.location.pathname);
-  const dirName = contestName;
-  await fetchAndSetContent(`/static/${dirName}/input_${seed}.txt`, '#input');
-  await fetchAndSetContent(`/static/${dirName}/output_${seed}.txt`, '#output');
-  apply(seed.toString(), document.querySelector<HTMLInputElement>('#input')!.value, document.querySelector<HTMLInputElement>('#output')!.value);
-}
-
-function checkSeedParameter() {
+async function loadSeedData(): Promise<void> {
   const urlParams = new URLSearchParams(window.location.search);
   const seedParam = urlParams.get('seed');
 
-  if (seedParam !== null) {
-    const seed = parseInt(seedParam, 10);
-    if (isNaN(seed)) {
-      alert('Error: Seed must be a number');
-    } else {
-      loadSeedData(seed);
-    }
+  if (seedParam === null) {
+    return;
   }
+  const seed = parseInt(seedParam, 10);
+  if (isNaN(seed)) {
+    alert('Error: Seed must be a number');
+    return;
+  }
+  setValueToElement('#seed', seed);
+  const contestName = extractContestName(window.location.pathname);
+  const dirName = contestName;
+  const [input, output] = await Promise.all([
+    fetch(`/static/${dirName}/input_${seed}.txt`).then(resp => resp.text()),
+    fetch(`/static/${dirName}/output_${seed}.txt`).then(resp => resp.text())]
+  );
+  setValueToElement('#input', input);
+  setValueToElement('#output', output);
+  apply(seed, input, output);
 }
 
 // Modify the play function as follows
-async function toggle(): Promise<void> {
-  if (visualizer === null) {
+function toggle(): void {
+  if (visualizer === NO_OP_VISUALIZER) {
     return;
   }
   const toggleButton = document.getElementById("toggleButton")!;
   if (!isPlaying) {
-    const turnElement = document.querySelector<HTMLInputElement>("#turn")!;
-    if (Number(turnElement.value) >= visualizer.getMaxTurn()) {
-      turnElement.value = "0";
+    if (getNumberFromElement("#turn") >= visualizer.getMaxTurn()) {
+      setValueToElement("#turn", 0);
     }
     toggleButton.innerHTML = "■";
     prev = Date.now();
@@ -89,27 +88,25 @@ async function toggle(): Promise<void> {
     toggleButton.innerHTML = "▶";
   }
   isPlaying = !isPlaying;
+  autoPlay();
 }
 
 function autoPlay(): void {
-  if (isPlaying) {
-    const now = Date.now();
-    let s = 1000;
-    const speedElem = document.querySelector<HTMLInputElement>("#speed")!;
-    const speed = Number(speedElem.value);
-    if ((now - prev) * speed >= s) {
-      const inc = Math.floor((now - prev) * speed / s);
-      prev += Math.floor(inc * s / speed);
-      const turn = Number(document.querySelector<HTMLInputElement>("#turn")!.value);
-      const newTurn = turn + inc;
-      updateTurn(newTurn);
-      if (turn >= visualizer.getMaxTurn()) {
-        const toggleButton = document.getElementById("toggleButton");
-        if (toggleButton) {
-          toggleButton.innerHTML = "▶";
-        }
-        isPlaying = false;
-      }
+  if (!isPlaying) {
+    return;
+  }
+
+  const now = Date.now();
+  let s = 1000;
+  const speed = getNumberFromElement("#speed", 1);
+  if ((now - prev) * speed >= s) {
+    const inc = Math.floor((now - prev) * speed / s);
+    prev += Math.floor(inc * s / speed);
+    const turn = getNumberFromElement("#turn");
+    const newTurn = turn + inc;
+    updateTurn(newTurn);
+    if (newTurn >= visualizer.getMaxTurn()) {
+      toggle();
     }
   }
   requestAnimationFrame(autoPlay);
@@ -117,31 +114,38 @@ function autoPlay(): void {
 
 function updateTurn(turn: number): void {
   const newTurn = Math.min(turn, visualizer.getMaxTurn());
-  const turnElem = document.querySelector<HTMLInputElement>("#turn");
-  if (turnElem) {
-    turnElem.value = newTurn.toString();
-  }
-  visualizer.apply(turn.toString());
+  setValueToElement("#turn", newTurn);
+  visualizer.apply(newTurn);
 }
 
 autoPlay();
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggleButton")?.addEventListener("click", toggle);
-  document.getElementById("turn")?.addEventListener("change", () => {
-    const turn = Number(document.querySelector<HTMLInputElement>("turn")!.value);
-    updateTurn(turn);
-  });
+  document.getElementById("turn")?.addEventListener("change", () => updateTurn(getNumberFromElement("#turn")));
   document.querySelector<HTMLInputElement>("#rangeDiv input")?.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement | null;
     if (target) {
-      const turn = target.value;
-      const turnElem = document.querySelector<HTMLInputElement>("turn");
-      if (turnElem) {
-        turnElem.value = turn;
-      }
+      const turn = Number(target.value);
+      setValueToElement("#turn", turn);
       updateTurn(Number(turn));
     }
   });
-  checkSeedParameter();
+  loadSeedData();
 });
+
+function getNumberFromElement(id: string, defaultValue: number = 0): number {
+  const elem = document.querySelector<HTMLInputElement>(id);
+  if (elem) {
+    return Number(elem.value);
+  } else {
+    return defaultValue;
+  }
+}
+
+function setValueToElement(id: string, value: number | string): void {
+  const turnElem = document.querySelector<HTMLInputElement>(id);
+  if (turnElem) {
+    turnElem.value = value.toString();
+  }
+}

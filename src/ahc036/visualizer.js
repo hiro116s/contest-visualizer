@@ -34,7 +34,6 @@ function parseTurnData(inData, outData) {
 function parseInput(input) {
   const inputLines = input.trim().split("\n");
   const [n, m, t, la, lb] = inputLines.shift().split(" ").map(Number);
-  console.log();
 
   const es = [];
   for (let i = 0; i < m; i++) {
@@ -58,7 +57,6 @@ function parseOutput(output) {
     const [op, ...args] = line.split(" ");
     return [op, args.map(Number)];
   });
-  console.log(ops);
   return { a, ops };
 }
 
@@ -158,7 +156,7 @@ function apply(turn) {
 }
 
 function getMaxTurn() {
-  return data.inData.n;
+  return data.inData.n - 1;
 }
 
 const visualizer = {
